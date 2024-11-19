@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Список подарков</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h2>Список подарков</h2>
+        <button id="addGiftButton">Добавить подарок</button>
+        <button id="backToPeopleButton">Вернуться к списку людей</button>
+        <button id="logoutButton">Выйти</button>
+    </header>
+    
+    <section id="giftList"></section>
+
+    <script>
+        const personId = new URLSearchParams(window.location.search).get('personId');
+
+        // Загрузка списка подарков для конкретного человека
+        async function loadGifts() {
+            try {
+                const response = await fetch(`/gifts/${personId}`);
+                
+                if (response.status === 404) {
+                    document.getElementById('giftList').innerHTML = '<p>У этого человека нет подарков.</p>';
+                    return;
+                }
+
+                const gifts = await response.json();
+                
+                const giftList = document.getElementById('giftList');
+                giftList.innerHTML = ''; // Очищаем список перед добавлением новых элементов
+
+                if (gifts.length === 0) {
+                    giftList.innerHTML = '<p>У этого человека нет подарков.</p>';
+                    return;
+                }
+
+                gifts.forEach(gift => {
+                    const giftDiv = document.createElement('div');
+                    giftDiv.className = 'gift' + (gift.is_completed ? ' completed' : '');
+                    giftDiv.textContent = gift.gift_name + (gift.is_completed ? ' (Готово)' : ' (Купить)');
+
+                    // Кнопка удаления подарка
+                    const deleteButton = document.createElement('button');
+                    deleteButton.textContent = 'Удалить';
+                    deleteButton.addEventListener('click', (event) => {
+                        event.stopPropagation(); // Останавливаем всплытие, чтобы не запускался обработчик клика на giftDiv
+                        deleteGift(gift.id);
+                    });
+                    giftDiv.appendChild(deleteButton);
+
+                    // Кнопка изменения статуса подарка
+                    const toggleStatusButton = document.createElement('button');
+                    toggleStatusButton.textContent = gift.is_completed ? 'Сделать "Купить"' : 'Сделать "Готово"';
+                    toggleStatusButton.addEventListener('click', (event) => {
+                        event.stopPropagation();
+                        toggleGiftStatus(gift.id, !gift.is_completed);
+                    });
+                    giftDiv.appendChild(toggleStatusButton);
+
+                    giftList.appendChild(giftDiv);
+                });
+
+            } catch (error) {
+                console.error('Ошибка при загрузке списка подарков:', error);
+            }
+        }
+
+        // Функция добавления подарка
+        document.getElementById('addGiftButton').addEventListener('click', async () => {
+            const giftName = prompt("Введите название подарка:");
+            if (!giftName) return;
+
+            try {
+                const response = await fetch('/gifts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ personId: personId, giftName: giftName })
+                });
+                if (response.ok) {
+                    loadGifts();
+                } else {
+                    alert('Ошибка при добавлении подарка');
+                }
+            } catch (error) {
+                console.error('Ошибка при добавлении подарка:', error);
+            }
+        });
+
+        // Функция удаления подарка
+        async function deleteGift(giftId) {
+            try {
+                const response = await fetch(`/gifts/${giftId}`, {
+                    method: 'DELETE'
+                });
+                if (response.ok) {
+                    loadGifts();
+                } else {
+                    alert('Ошибка при удалении подарка');
+                }
+            } catch (error) {
+                console.error('Ошибка при удалении подарка:', error);
+            }
+        }
+
+        // Функция изменения статуса подарка
+        async function toggleGiftStatus(giftId, isCompleted) {
+            try {
+                const response = await fetch(`/gifts/${giftId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ isCompleted: isCompleted })
+                });
+                if (response.ok) {
+                    loadGifts();
+                } else {
+                    alert('Ошибка при обновлении статуса подарка');
+                }
+            } catch (error) {
+                console.error('Ошибка при обновлении статуса подарка:', error);
+            }
+        }
+
+        // Кнопка возврата к списку людей
+        document.getElementById('backToPeopleButton').addEventListener('click', () => {
+            window.location.href = 'people.html';
+        });
+
+        // Кнопка выхода
+        document.getElementById('logoutButton').addEventListener('click', async () => {
+            try {
+                await fetch('/auth/logout', { method: 'POST' });
+                window.location.href = 'index.html';
+            } catch (error) {
+                console.error('Ошибка при выходе:', error);
+            }
+        });
+
+        // Загрузка списка подарков при загрузке страницы
+        loadGifts();
+    </script>
+</body>
+</html>

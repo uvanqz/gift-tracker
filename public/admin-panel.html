@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Админ-Панель</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; }
+        .container { max-width: 1200px; margin: auto; padding: 20px; }
+        h1 { text-align: center; color: #333; }
+        section { margin-bottom: 40px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; background-color: #fff; }
+        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
+        th { background-color: #f2f2f2; }
+        button { padding: 8px 12px; cursor: pointer; background-color: #4CAF50; color: #fff; border: none; border-radius: 4px; }
+        button:hover { background-color: #45a049; }
+        .form-container { margin-bottom: 20px; background-color: #fff; padding: 20px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        input, select { padding: 8px; margin-right: 10px; margin-bottom: 10px; width: calc(33% - 20px); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Админ-Панель Управления</h1>
+
+        <!-- Управление пользователями -->
+        <section>
+            <h2>Пользователи</h2>
+            <table id="users-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Имя пользователя</th>
+                        <th>Пароль</th>
+                        <th>Роль</th>
+                        <th>Действие</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+
+            <div class="form-container">
+                <h3>Создать нового пользователя</h3>
+                <input type="text" id="new-username" placeholder="Имя пользователя" required>
+                <input type="password" id="new-password" placeholder="Пароль" required>
+                <select id="new-role">
+                    <option value="user">Пользователь</option>
+                    <option value="admin">Администратор</option>
+                </select>
+                <button onclick="createUser()">Создать пользователя</button>
+                <p id="userMessage"></p>
+            </div>
+        </section>
+
+        <!-- Управление людьми -->
+        <section>
+            <h2>Люди</h2>
+            <table id="people-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>ID пользователя</th>
+                        <th>Имя человека</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+
+            <div class="form-container">
+                <h3>Создать нового человека</h3>
+                <input type="text" id="new-person-name" placeholder="Имя человека" required>
+                <input type="number" id="new-person-userId" placeholder="ID пользователя" required>
+                <button onclick="createPerson()">Создать человека</button>
+                <p id="personMessage"></p>
+            </div>
+        </section>
+
+        <!-- Управление подарками -->
+        <section>
+            <h2>Подарки</h2>
+            <table id="gifts-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>ID человека</th>
+                        <th>Название подарка</th>
+                        <th>Статус</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+
+            <div class="form-container">
+                <h3>Создать новый подарок</h3>
+                <input type="text" id="new-gift-name" placeholder="Название подарка" required>
+                <input type="number" id="new-gift-personId" placeholder="ID человека" required>
+                <label for="new-gift-status">Статус:</label>
+                <select id="new-gift-status">
+                    <option value="false">Купить</option>
+                    <option value="true">Готово</option>
+                </select>
+                <button onclick="createGift()">Создать подарок</button>
+                <p id="giftMessage"></p>
+            </div>
+        </section>
+
+        <button id="logoutButton">Выйти</button>
+    </div>
+
+    <script>
+        // Функция для получения данных и заполнения таблицы
+        async function fetchData(url, tableId) {
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                const tbody = document.getElementById(tableId).querySelector('tbody');
+                tbody.innerHTML = '';
+
+                data.forEach(item => {
+                    const row = document.createElement('tr');
+                    for (const key in item) {
+                        const cell = document.createElement('td');
+                        cell.textContent = item[key];
+                        row.appendChild(cell);
+                    }
+                    const actionsCell = document.createElement('td');
+                    const deleteButton = document.createElement('button');
+                    deleteButton.textContent = 'Удалить';
+                    deleteButton.style.backgroundColor = '#f44336';
+                    deleteButton.onclick = () => deleteData(`${url}/${item.id}`, tableId);
+                    actionsCell.appendChild(deleteButton);
+                    row.appendChild(actionsCell);
+                    tbody.appendChild(row);
+                });
+            } catch (error) {
+                console.error(`Ошибка при загрузке данных из ${url}:`, error);
+            }
+        }
+
+        // Функция для удаления данных
+        async function deleteData(url, tableId) {
+            if (!confirm('Вы уверены, что хотите удалить эту запись?')) return;
+            try {
+                const response = await fetch(url, { method: 'DELETE' });
+                if (response.ok) {
+                    fetchData(tableId === 'users-table' ? '/admin/users' :
+                             tableId === 'people-table' ? '/admin/people' :
+                             '/admin/gifts', tableId);
+                } else {
+                    alert('Ошибка при удалении записи');
+                }
+            } catch (error) {
+                console.error('Ошибка при удалении:', error);
+            }
+        }
+
+        // Функция для создания нового пользователя
+        async function createUser() {
+            const username = document.getElementById('new-username').value.trim();
+            const password = document.getElementById('new-password').value.trim();
+            const role = document.getElementById('new-role').value;
+
+            if (!username || !password) {
+                document.getElementById('userMessage').textContent = 'Пожалуйста, заполните все поля.';
+                return;
+            }
+
+            try {
+                const response = await fetch('/admin/users', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password, role })
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    document.getElementById('userMessage').textContent = result.message;
+                    fetchData('/admin/users', 'users-table');
+                    document.getElementById('new-username').value = '';
+                    document.getElementById('new-password').value = '';
+                    document.getElementById('new-role').value = 'user';
+                } else {
+                    document.getElementById('userMessage').textContent = result.message;
+                }
+            } catch (error) {
+                console.error('Ошибка при создании пользователя:', error);
+                document.getElementById('userMessage').textContent = 'Ошибка при создании пользователя';
+            }
+        }
+
+        // Функция для создания нового человека
+        async function createPerson() {
+            const name = document.getElementById('new-person-name').value.trim();
+            const userId = parseInt(document.getElementById('new-person-userId').value.trim());
+
+            if (!name || isNaN(userId)) {
+                document.getElementById('personMessage').textContent = 'Пожалуйста, заполните все поля корректно.';
+                return;
+            }
+
+            try {
+                const response = await fetch('/admin/people', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId, name })
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    document.getElementById('personMessage').textContent = 'Человек создан успешно';
+                    fetchData('/admin/people', 'people-table');
+                    document.getElementById('new-person-name').value = '';
+                    document.getElementById('new-person-userId').value = '';
+                } else {
+                    document.getElementById('personMessage').textContent = result.message;
+                }
+            } catch (error) {
+                console.error('Ошибка при создании человека:', error);
+                document.getElementById('personMessage').textContent = 'Ошибка при создании человека';
+            }
+        }
+
+        // Функция для создания нового подарка
+        async function createGift() {
+            const giftName = document.getElementById('new-gift-name').value.trim();
+            const personId = parseInt(document.getElementById('new-gift-personId').value.trim());
+            const status = document.getElementById('new-gift-status').value === 'true';
+
+            if (!giftName || isNaN(personId)) {
+                document.getElementById('giftMessage').textContent = 'Пожалуйста, заполните все поля корректно.';
+                return;
+            }
+
+            try {
+                const response = await fetch('/admin/gifts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ giftName, personId, status })
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    document.getElementById('giftMessage').textContent = 'Подарок создан успешно';
+                    fetchData('/admin/gifts', 'gifts-table');
+                    document.getElementById('new-gift-name').value = '';
+                    document.getElementById('new-gift-personId').value = '';
+                    document.getElementById('new-gift-status').value = 'false';
+                } else {
+                    document.getElementById('giftMessage').textContent = result.message;
+                }
+            } catch (error) {
+                console.error('Ошибка при создании подарка:', error);
+                document.getElementById('giftMessage').textContent = 'Ошибка при создании подарка';
+            }
+        }
+
+        // Функция для выхода
+        document.getElementById('logoutButton').addEventListener('click', async () => {
+            try {
+                await fetch('/auth/logout', { method: 'POST' });
+                window.location.href = 'index.html';
+            } catch (error) {
+                console.error('Ошибка при выходе:', error);
+            }
+        });
+
+        // Загрузка данных при загрузке страницы
+        window.onload = () => {
+            fetchData('/admin/users', 'users-table');
+            fetchData('/admin/people', 'people-table');
+            fetchData('/admin/gifts', 'gifts-table');
+        };
+    </script>
+</body>
+</html>

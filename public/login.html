@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Вход</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header><h2>Вход</h2></header>
+    <form id="loginForm">
+        <label for="username">Имя пользователя:</label>
+        <input type="text" id="username" name="username" required>
+        
+        <label for="password">Пароль:</label>
+        <input type="password" id="password" name="password" required>
+        
+        <button type="submit">Войти</button>
+        <div id="loginMessage" class="message"></div>
+    </form>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const messageEl = document.getElementById('loginMessage');
+
+            try {
+                const response = await fetch('/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    if (result.role === 'admin') {
+                        window.location.href = 'admin-panel.html';
+                    } else {
+                        window.location.href = 'people.html';
+                    }
+                } else {
+                    messageEl.textContent = result.message;
+                    messageEl.classList.remove('success');
+                    messageEl.classList.add('error');
+                }
+            } catch (error) {
+                messageEl.textContent = 'Ошибка при входе. Попробуйте снова.';
+                messageEl.classList.remove('success');
+                messageEl.classList.add('error');
+                console.error(error);
+            }
+        });
+    </script>
+</body>
+</html>

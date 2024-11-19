@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Список людей</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h2>Список людей</h2>
+        <button id="addPersonButton">Добавить человека</button>
+        <button id="logoutButton">Выйти</button>
+    </header>
+    
+    <section id="peopleList"></section>
+
+    <script>
+        // Загрузка списка людей
+        async function loadPeople() {
+            try {
+                const response = await fetch('/person');
+                const people = await response.json();
+                
+                const peopleList = document.getElementById('peopleList');
+                peopleList.innerHTML = ''; // Очищаем список перед добавлением новых элементов
+
+                people.forEach(person => {
+                    const personDiv = document.createElement('div');
+                    personDiv.className = 'person';
+                    personDiv.textContent = person.name;
+
+                    // Кнопка удаления человека
+                    const deleteButton = document.createElement('button');
+                    deleteButton.textContent = 'Удалить';
+                    deleteButton.addEventListener('click', (event) => {
+                        event.stopPropagation(); // Останавливаем всплытие, чтобы не запускался обработчик клика на personDiv
+                        deletePerson(person.id);
+                    });
+                    personDiv.appendChild(deleteButton);
+
+                    // Переход к подаркам человека при клике на сам элемент, но не на кнопку удаления
+                    personDiv.addEventListener('click', () => {
+                        window.location.href = `gifts.html?personId=${person.id}`;
+                    });
+
+                    peopleList.appendChild(personDiv);
+                });
+            } catch (error) {
+                console.error('Ошибка при загрузке списка людей:', error);
+            }
+        }
+
+        // Функция добавления человека
+        document.getElementById('addPersonButton').addEventListener('click', async () => {
+            const personName = prompt("Введите имя человека:");
+            if (!personName || personName.trim() === '') {
+                alert('Имя человека не может быть пустым');
+                return;
+            }
+
+            try {
+                const response = await fetch('/person', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: personName })
+                });
+
+                if (!response.ok) {
+                    const errorMessage = await response.text();  // Читаем текст ошибки
+                    alert(errorMessage);  // Показываем ошибку
+                    return;
+                }
+
+                loadPeople();
+            } catch (error) {
+                console.error('Ошибка при добавлении человека:', error);
+                alert('Ошибка при добавлении человека');
+            }
+        });
+
+        // Функция удаления человека
+        async function deletePerson(personId) {
+            try {
+                const response = await fetch(`/person/${personId}`, {
+                    method: 'DELETE'
+                });
+                if (response.ok) {
+                    loadPeople();
+                } else {
+                    alert('Ошибка при удалении человека');
+                }
+            } catch (error) {
+                console.error('Ошибка при удалении человека:', error);
+                alert('Ошибка при удалении человека');
+            }
+        }
+
+        // Кнопка выхода
+        document.getElementById('logoutButton').addEventListener('click', async () => {
+            try {
+                await fetch('/auth/logout', { method: 'POST' });
+                window.location.href = 'index.html';
+            } catch (error) {
+                console.error('Ошибка при выходе:', error);
+                alert('Ошибка при выходе');
+            }
+        });
+
+        loadPeople();
+    </script>
+</body>
+</html>

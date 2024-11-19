@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Регистрация</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header><h2>Регистрация</h2></header>
+    <form id="registerForm">
+        <label for="username">Имя пользователя:</label>
+        <input type="text" id="username" name="username" required>
+        
+        <label for="password">Пароль:</label>
+        <input type="password" id="password" name="password" required>
+        
+        <button type="submit">Зарегистрироваться</button>
+    </form>
+    <div id="registerMessage" class="message"></div> 
+
+    <script>
+        document.getElementById('registerForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const messageEl = document.getElementById('registerMessage');
+
+            try {
+                const response = await fetch('/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    messageEl.textContent = 'Регистрация прошла успешно! Переход на страницу входа...';
+                    messageEl.classList.remove('error');
+                    messageEl.classList.add('success');
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 2000);
+                } else {
+                    messageEl.textContent = result.message;
+                    messageEl.classList.remove('success');
+                    messageEl.classList.add('error');
+                }
+            } catch (error) {
+                messageEl.textContent = 'Ошибка регистрации. Попробуйте снова.';
+                messageEl.classList.add('error');
+                console.error(error);
+            }
+        });
+    </script>
+</body>
+</html>
